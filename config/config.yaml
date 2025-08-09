@@ -1,0 +1,48 @@
+# Test Case Generator Bot Configuration
+
+# AI Model Configuration
+ai:
+  provider: "openai"  # openai, anthropic, local
+  model: "gpt-4"
+  api_key_env: "OPENAI_API_KEY"
+  max_tokens: 2000
+  temperature: 0.3
+
+# Code Analysis Settings
+analysis:
+  max_complexity_threshold: 10
+  detect_performance_risks: true
+  detect_security_issues: true
+  supported_languages:
+    - python
+    - javascript
+    - typescript
+    - java
+
+# Test Generation Settings
+test_generation:
+  generate_unit_tests: true
+  generate_integration_tests: true
+  generate_edge_case_tests: true
+  min_coverage_threshold: 80
+  max_tests_per_function: 5
+
+# Output Settings
+output:
+  format: "pytest"  # pytest, unittest, jest, junit
+  include_comments: true
+  include_docstrings: true
+  generate_coverage_report: true
+
+# GitHub Integration
+github:
+  enabled: false
+  auto_comment_prs: true
+  create_check_runs: true
+  min_coverage_for_success: 80
+
+# Logging
+logging:
+  level: "INFO"
+  file: "test_generator.log"
+  console: true
