@@ -11,6 +11,7 @@ from rich.panel import Panel
 from agents.test_agent import TestGeneratorAgent
 from analyzers.code_analyzer import CodeAnalyzer
 from generators.test_generator import TestGenerator
+from config.ai_config import AIConfigManager
 
 console = Console()
 
@@ -28,6 +29,14 @@ def main(file, language, output, interactive, coverage):
         "Analyzing code and generating intelligent test cases...",
         border_style="blue"
     ))
+    
+    # Show AI configuration status
+    ai_config = AIConfigManager()
+    setup_info = ai_config.validate_setup()
+    if setup_info['has_ai_capability']:
+        console.print(f"[green]🤖 AI Enhancement: {setup_info['preferred_provider'].title()}[/green]")
+    else:
+        console.print("[yellow]🤖 AI Enhancement: Disabled (run python setup_ai.py to configure)[/yellow]")
     
     # Validate input file
     code_file = Path(file)

@@ -28,5 +28,34 @@ test-generator-bot/
 ## Quick Start
 
 1. Install dependencies: `pip install -r requirements.txt`
-2. Set up your AI model API key
+2. Set up AI API key (optional but recommended):
+   ```bash
+   python setup_ai.py
+   ```
+   Or manually set environment variables:
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   # OR
+   export ANTHROPIC_API_KEY="your-api-key-here"
+   ```
 3. Run: `python src/main.py --file your_code.py`
+
+## AI Enhancement
+
+The bot supports multiple AI providers for enhanced test generation:
+
+- **OpenAI GPT-4**: Set `OPENAI_API_KEY` environment variable
+- **Anthropic Claude**: Set `ANTHROPIC_API_KEY` environment variable  
+- **Auto-detection**: Will use available provider automatically
+- **Mock Mode**: Works without API keys (basic enhancement only)
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Choose provider: "openai", "anthropic", "auto", or "mock"
+AI_PROVIDER=auto
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```

@@ -12,6 +12,7 @@ from rich.panel import Panel
 
 from analyzers.code_analyzer import CodeAnalyzer, AnalysisResult
 from generators.test_generator import TestGenerator, TestCase
+from config.ai_config import AIConfigManager
 
 console = Console()
 
@@ -23,13 +24,27 @@ class TestGeneratorAgent:
         self.generator = generator
         self.current_analysis: Optional[AnalysisResult] = None
         self.current_tests: List[TestCase] = []
+        self.ai_config = AIConfigManager()
         self.ai_client = self._initialize_ai_client()
     
     def _initialize_ai_client(self):
-        """Initialize AI client (OpenAI, Anthropic, etc.)."""
-        # This would initialize your preferred AI client
-        # For now, we'll use a mock implementation
-        return MockAIClient()
+        """Initialize AI client based on configuration and available API keys."""
+        setup_info = self.ai_config.validate_setup()
+        provider = setup_info['preferred_provider']
+        
+        if provider == 'openai':
+            api_key = self.ai_config.get_api_key('openai')
+            console.print(f"[blue]Using OpenAI {self.ai_config.config.openai_model} for test enhancement[/blue]")
+            return OpenAIClient(api_key, self.ai_config.config)
+        elif provider == 'anthropic':
+            api_key = self.ai_config.get_api_key('anthropic')
+            console.print(f"[blue]Using Anthropic {self.ai_config.config.anthropic_model} for test enhancement[/blue]")
+            return AnthropicClient(api_key, self.ai_config.config)
+        else:
+            console.print("[yellow]No AI API key found. Using mock client for demonstration.[/yellow]")
+            for recommendation in setup_info['recommendations']:
+                console.print(f"[yellow]💡 {recommendation}[/yellow]")
+            return MockAIClient()
     
     def process_file(self, file_path: str, language: Optional[str] = None, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """Process a code file and generate comprehensive test cases."""
@@ -379,14 +394,308 @@ import org.mockito.MockitoAnnotations;
             console.print("[red]Please enter a valid number[/red]")
 
 
+class OpenAIClient:
+    """OpenAI API client for test enhancement."""
+    
+    def __init__(self, api_key: str, config):
+        try:
+            import openai
+            self.client = openai.OpenAI(
+                api_key=api_key,
+                timeout=config.timeout
+            )
+            self.model = config.openai_model
+            self.max_tokens = config.max_tokens
+            self.temperature = config.temperature
+        except ImportError:
+            console.print("[red]Error: openai package not installed. Run: pip install openai[/red]")
+            raise
+    
+    def enhance_test_case(self, test: TestCase, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Enhance test case using OpenAI API."""
+        try:
+            prompt = self._create_enhancement_prompt(test, context)
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert software testing engineer. Enhance the provided test case to make it more comprehensive, realistic, and maintainable."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+            
+            enhanced_content = response.choices[0].message.content
+            return self._parse_enhancement_response(enhanced_content, test)
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: OpenAI API error: {e}[/yellow]")
+            return None
+    
+    def suggest_test_improvements(self, test: TestCase, context: Dict[str, Any]) -> str:
+        """Get test improvement suggestions from OpenAI."""
+        try:
+            prompt = f"""
+Analyze this test case and provide specific improvement suggestions:
+
+Test Name: {test.name}
+Test Type: {test.test_type}
+Function: {test.function_name}
+Language: {context['language']}
+
+Current Test Code:
+{test.test_code}
+
+Context:
+- Domain: {context.get('functions', [{}])[0].get('complexity', 'unknown')}
+- Edge Cases: {context.get('edge_cases', [])}
+- Performance Risks: {context.get('performance_risks', [])}
+
+Provide 3-5 specific, actionable improvement suggestions.
+"""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert software testing engineer. Provide specific, actionable suggestions for improving test cases."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=min(500, self.max_tokens),
+                temperature=self.temperature
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: OpenAI API error: {e}[/yellow]")
+            return "Unable to get AI suggestions at this time."
+    
+    def _create_enhancement_prompt(self, test: TestCase, context: Dict[str, Any]) -> str:
+        """Create prompt for test enhancement."""
+        return f"""
+Enhance this {context['language']} test case to make it more comprehensive and realistic:
+
+Test Name: {test.name}
+Test Type: {test.test_type}
+Function: {test.function_name}
+Description: {test.description}
+
+Current Test Code:
+{test.test_code}
+
+Context Information:
+- Language: {context['language']}
+- Function Domain: {context.get('functions', [{}])[0].get('name', 'unknown')}
+- Detected Edge Cases: {context.get('edge_cases', [])}
+- Performance Risks: {context.get('performance_risks', [])}
+
+Please enhance this test by:
+1. Adding more specific and meaningful assertions
+2. Using realistic test data
+3. Adding proper error handling expectations
+4. Including setup/teardown if needed
+5. Adding clear comments explaining the test logic
+
+Return the enhanced test code and a brief description of improvements made.
+Format your response as:
+ENHANCED_CODE:
+[enhanced test code here]
+
+DESCRIPTION:
+[brief description of improvements]
+
+ASSERTIONS:
+[list of key assertions to verify]
+"""
+    
+    def _parse_enhancement_response(self, response: str, original_test: TestCase) -> Dict[str, Any]:
+        """Parse OpenAI response into structured enhancement data."""
+        try:
+            parts = response.split('ENHANCED_CODE:')
+            if len(parts) < 2:
+                return None
+            
+            code_and_rest = parts[1].split('DESCRIPTION:')
+            enhanced_code = code_and_rest[0].strip()
+            
+            description = original_test.description
+            assertions = []
+            
+            if len(code_and_rest) > 1:
+                desc_and_rest = code_and_rest[1].split('ASSERTIONS:')
+                description = desc_and_rest[0].strip()
+                
+                if len(desc_and_rest) > 1:
+                    assertions_text = desc_and_rest[1].strip()
+                    assertions = [line.strip('- ').strip() for line in assertions_text.split('\n') if line.strip()]
+            
+            return {
+                'code': enhanced_code,
+                'description': description,
+                'assertions': assertions
+            }
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: Failed to parse OpenAI response: {e}[/yellow]")
+            return None
+
+
+class AnthropicClient:
+    """Anthropic Claude API client for test enhancement."""
+    
+    def __init__(self, api_key: str, config):
+        try:
+            import anthropic
+            self.client = anthropic.Anthropic(
+                api_key=api_key,
+                timeout=config.timeout
+            )
+            self.model = config.anthropic_model
+            self.max_tokens = config.max_tokens
+            self.temperature = config.temperature
+        except ImportError:
+            console.print("[red]Error: anthropic package not installed. Run: pip install anthropic[/red]")
+            raise
+    
+    def enhance_test_case(self, test: TestCase, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Enhance test case using Anthropic Claude API."""
+        try:
+            prompt = self._create_enhancement_prompt(test, context)
+            
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            
+            enhanced_content = response.content[0].text
+            return self._parse_enhancement_response(enhanced_content, test)
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: Anthropic API error: {e}[/yellow]")
+            return None
+    
+    def suggest_test_improvements(self, test: TestCase, context: Dict[str, Any]) -> str:
+        """Get test improvement suggestions from Anthropic Claude."""
+        try:
+            prompt = f"""
+As an expert software testing engineer, analyze this test case and provide specific improvement suggestions:
+
+Test Details:
+- Name: {test.name}
+- Type: {test.test_type}
+- Function: {test.function_name}
+- Language: {context['language']}
+
+Current Test Code:
+{test.test_code}
+
+Context Information:
+- Edge Cases Detected: {context.get('edge_cases', [])}
+- Performance Risks: {context.get('performance_risks', [])}
+
+Please provide 3-5 specific, actionable suggestions to improve this test case. Focus on:
+- Test completeness and coverage
+- Assertion quality and specificity
+- Edge case handling
+- Code maintainability
+- Best practices for the language/framework
+"""
+            
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=min(500, self.max_tokens),
+                temperature=self.temperature,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            
+            return response.content[0].text
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: Anthropic API error: {e}[/yellow]")
+            return "Unable to get AI suggestions at this time."
+    
+    def _create_enhancement_prompt(self, test: TestCase, context: Dict[str, Any]) -> str:
+        """Create prompt for test enhancement."""
+        return f"""
+As an expert software testing engineer, please enhance this {context['language']} test case:
+
+Current Test:
+Name: {test.name}
+Type: {test.test_type}
+Function: {test.function_name}
+Description: {test.description}
+
+Code:
+{test.test_code}
+
+Context:
+- Language: {context['language']}
+- Detected Edge Cases: {context.get('edge_cases', [])}
+- Performance Risks: {context.get('performance_risks', [])}
+
+Please enhance this test by:
+1. Adding more specific and meaningful assertions
+2. Using realistic, domain-appropriate test data
+3. Adding proper error handling expectations
+4. Including necessary setup/teardown
+5. Adding clear, helpful comments
+
+Please format your response as:
+
+ENHANCED_CODE:
+[Your enhanced test code here]
+
+DESCRIPTION:
+[Brief description of the improvements you made]
+
+ASSERTIONS:
+[List the key assertions that should be verified]
+"""
+    
+    def _parse_enhancement_response(self, response: str, original_test: TestCase) -> Dict[str, Any]:
+        """Parse Anthropic response into structured enhancement data."""
+        try:
+            parts = response.split('ENHANCED_CODE:')
+            if len(parts) < 2:
+                return None
+            
+            code_and_rest = parts[1].split('DESCRIPTION:')
+            enhanced_code = code_and_rest[0].strip()
+            
+            description = original_test.description
+            assertions = []
+            
+            if len(code_and_rest) > 1:
+                desc_and_rest = code_and_rest[1].split('ASSERTIONS:')
+                description = desc_and_rest[0].strip()
+                
+                if len(desc_and_rest) > 1:
+                    assertions_text = desc_and_rest[1].strip()
+                    assertions = [line.strip('- ').strip() for line in assertions_text.split('\n') if line.strip()]
+            
+            return {
+                'code': enhanced_code,
+                'description': description,
+                'assertions': assertions
+            }
+            
+        except Exception as e:
+            console.print(f"[yellow]Warning: Failed to parse Anthropic response: {e}[/yellow]")
+            return None
+
+
 class MockAIClient:
-    """Mock AI client for demonstration purposes."""
+    """Mock AI client for demonstration when no API key is available."""
     
     def enhance_test_case(self, test: TestCase, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Mock enhancement of test cases."""
-        # In a real implementation, this would call OpenAI/Anthropic API
-        # For now, return some basic enhancements
-        
         enhancements = {
             'code': test.test_code,
             'description': f"Enhanced: {test.description}",
@@ -411,10 +720,11 @@ class MockAIClient:
         """Mock test improvement suggestions."""
         suggestions = [
             "Consider adding more specific assertions",
-            "Add setup and teardown if needed",
+            "Add setup and teardown if needed", 
             "Test boundary conditions",
             "Add documentation for test purpose",
-            "Consider parameterized tests for multiple inputs"
+            "Consider parameterized tests for multiple inputs",
+            "Set OPENAI_API_KEY or ANTHROPIC_API_KEY for AI-powered suggestions"
         ]
         
         return "\n".join(f"• {suggestion}" for suggestion in suggestions)
