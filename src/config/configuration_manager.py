@@ -82,15 +82,14 @@ class ConfigurationManager(IConfigurationManager):
             if ai_config.get('provider') and ai_config['provider'] not in valid_providers:
                 return False
             
-            # Validate numeric settings
-            numeric_validations = [
+            # Validate AI numeric settings
+            ai_numeric_validations = [
                 ('max_tokens', lambda x: isinstance(x, int) and x > 0),
                 ('temperature', lambda x: isinstance(x, (int, float)) and 0 <= x <= 2),
-                ('timeout', lambda x: isinstance(x, int) and x > 0),
-                ('coverage_threshold', lambda x: isinstance(x, (int, float)) and 0 <= x <= 100)
+                ('timeout', lambda x: isinstance(x, int) and x > 0)
             ]
             
-            for key, validator in numeric_validations:
+            for key, validator in ai_numeric_validations:
                 if key in ai_config and not validator(ai_config[key]):
                     return False
             
@@ -98,6 +97,11 @@ class ConfigurationManager(IConfigurationManager):
             test_config = config.get('test_generation', {})
             if 'max_test_cases_per_function' in test_config:
                 if not isinstance(test_config['max_test_cases_per_function'], int) or test_config['max_test_cases_per_function'] <= 0:
+                    return False
+            
+            if 'coverage_threshold' in test_config:
+                threshold = test_config['coverage_threshold']
+                if not isinstance(threshold, (int, float)) or threshold < 0 or threshold > 100:
                     return False
             
             return True
@@ -161,11 +165,13 @@ class ConfigurationManager(IConfigurationManager):
         
         # Merge with defaults
         default_config = default_configs.get(lang_str, {})
-        default_config.update(file_config)
         
-        # Override with global test framework setting if specified
-        if lang_str in self.config.default_test_framework:
+        # Override with global test framework setting if specified and not overridden in language config
+        if lang_str in self.config.default_test_framework and 'test_framework' not in file_config:
             default_config['test_framework'] = self.config.default_test_framework[lang_str]
+        
+        # Apply language-specific overrides (this should come last to have highest priority)
+        default_config.update(file_config)
         
         return default_config
     

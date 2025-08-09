@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "Task Auto Commit",
+  "description": "Automatically commits and pushes changes to the repository with a timestamped commit message whenever a task is completed from the task list",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py",
+      "demo_tests/**/*.py",
+      "config/**/*.yaml",
+      "README.md",
+      "requirements.txt",
+      "examples/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task has been completed and files have been modified. Please commit and push these changes to the repository with a commit message that includes the current date and time stamp in the format: \"Task completed - [YYYY-MM-DD HH:MM:SS]\" followed by a brief description of what was accomplished."
+  }
+}
