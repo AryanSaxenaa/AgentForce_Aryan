@@ -4,6 +4,17 @@ AI Provider Factory - Creates AI provider instances
 from typing import Dict, Any, Type
 from src.interfaces.base_interfaces import IAIProvider, IAIProviderFactory, TestType
 
+# Import AI libraries at module level for easier mocking in tests
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
+
 
 class OpenAIProvider(IAIProvider):
     """OpenAI API provider implementation."""
@@ -20,14 +31,13 @@ class OpenAIProvider(IAIProvider):
     
     def _initialize_client(self):
         """Initialize OpenAI client."""
-        try:
-            import openai
-            self._client = openai.OpenAI(
-                api_key=self.api_key,
-                timeout=self.timeout
-            )
-        except ImportError:
+        if openai is None:
             raise ImportError("openai package not installed. Run: pip install openai")
+        
+        self._client = openai.OpenAI(
+            api_key=self.api_key,
+            timeout=self.timeout
+        )
     
     def enhance_test_case(self, test, context: Dict[str, Any]) -> Dict[str, Any]:
         """Enhance test case using OpenAI API."""
@@ -207,14 +217,13 @@ class AnthropicProvider(IAIProvider):
     
     def _initialize_client(self):
         """Initialize Anthropic client."""
-        try:
-            import anthropic
-            self._client = anthropic.Anthropic(
-                api_key=self.api_key,
-                timeout=self.timeout
-            )
-        except ImportError:
+        if anthropic is None:
             raise ImportError("anthropic package not installed. Run: pip install anthropic")
+        
+        self._client = anthropic.Anthropic(
+            api_key=self.api_key,
+            timeout=self.timeout
+        )
     
     def enhance_test_case(self, test, context: Dict[str, Any]) -> Dict[str, Any]:
         """Enhance test case using Anthropic Claude API."""
@@ -457,7 +466,7 @@ class AIProviderFactory(IAIProviderFactory):
         
         if provider_type == 'mock':
             return provider_class(config)
-        else:
+        elif provider_type in ['openai', 'anthropic']:
             # Get API key from environment
             import os
             api_key = None
@@ -470,7 +479,18 @@ class AIProviderFactory(IAIProviderFactory):
                 print(f"Warning: No API key found for {provider_type}, falling back to mock provider")
                 return self._providers['mock'](config)
             
-            return provider_class(api_key, config)
+            try:
+                return provider_class(api_key, config)
+            except ImportError as e:
+                print(f"Warning: {e}, falling back to mock provider")
+                return self._providers['mock'](config)
+        else:
+            # For custom providers, try to instantiate with config only
+            try:
+                return provider_class(config)
+            except TypeError:
+                # If that fails, try with no arguments (for providers that don't need config)
+                return provider_class()
     
     def get_supported_providers(self) -> list[str]:
         """Get list of supported providers."""
