@@ -8,10 +8,18 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
-from agents.test_agent import TestGeneratorAgent
-from analyzers.code_analyzer import CodeAnalyzer
-from generators.test_generator import TestGenerator
-from config.ai_config import AIConfigManager
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.agents.test_agent import TestGeneratorAgent
+from src.analyzers.code_analyzer import CodeAnalyzer
+from src.generators.test_generator import TestGenerator
+from src.config.configuration_manager import ConfigurationManager
+from src.factories.analyzer_factory import AnalyzerFactory
+from src.factories.generator_factory import GeneratorFactory
+from src.factories.ai_provider_factory import AIProviderFactory
+from src.interfaces.base_interfaces import Language
 
 console = Console()
 
@@ -30,11 +38,15 @@ def main(file, language, output, interactive, coverage):
         border_style="blue"
     ))
     
+    # Initialize configuration manager
+    config_manager = ConfigurationManager()
+    
     # Show AI configuration status
-    ai_config = AIConfigManager()
-    setup_info = ai_config.validate_setup()
-    if setup_info['has_ai_capability']:
-        console.print(f"[green]🤖 AI Enhancement: {setup_info['preferred_provider'].title()}[/green]")
+    available_providers = config_manager.get_available_ai_providers()
+    preferred_provider = config_manager.get_preferred_ai_provider()
+    
+    if preferred_provider != 'mock':
+        console.print(f"[green]🤖 AI Enhancement: {preferred_provider.title()}[/green]")
     else:
         console.print("[yellow]🤖 AI Enhancement: Disabled (run python setup_ai.py to configure)[/yellow]")
     
@@ -44,10 +56,40 @@ def main(file, language, output, interactive, coverage):
         console.print(f"[red]Error: File {file} not found[/red]")
         sys.exit(1)
     
-    # Initialize components
-    analyzer = CodeAnalyzer()
-    generator = TestGenerator()
-    agent = TestGeneratorAgent(analyzer, generator)
+    # Detect language if not specified
+    if not language:
+        language_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.java': 'java'
+        }
+        language = language_map.get(code_file.suffix.lower())
+        if not language:
+            console.print(f"[red]Error: Unable to detect language for {code_file.suffix}[/red]")
+            sys.exit(1)
+    
+    # Initialize factories
+    analyzer_factory = AnalyzerFactory()
+    generator_factory = GeneratorFactory()
+    ai_provider_factory = AIProviderFactory()
+    
+    # Create language-specific components
+    try:
+        lang_enum = Language(language)
+        analyzer = analyzer_factory.create_analyzer(lang_enum)
+        generator = generator_factory.create_generator(lang_enum)
+        
+        # Create AI provider
+        ai_config = config_manager.get_ai_provider_config()
+        ai_provider = ai_provider_factory.create_provider(preferred_provider, ai_config)
+        
+        # Initialize agent with configuration
+        agent = TestGeneratorAgent(analyzer, generator, config_manager, ai_provider)
+        
+    except ValueError as e:
+        console.print(f"[red]Error: {str(e)}[/red]")
+        sys.exit(1)
     
     try:
         # Analyze and generate tests

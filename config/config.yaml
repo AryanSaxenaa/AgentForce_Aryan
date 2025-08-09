@@ -1,12 +1,77 @@
 # Test Case Generator Bot Configuration
 
-# AI Model Configuration
+# AI Provider Configuration
 ai:
-  provider: "openai"  # openai, anthropic, local
-  model: "gpt-4"
-  api_key_env: "OPENAI_API_KEY"
-  max_tokens: 2000
+  provider: "auto"  # openai, anthropic, auto, mock
+  openai_model: "gpt-4"
+  anthropic_model: "claude-3-sonnet-20240229"
+  max_tokens: 1000
   temperature: 0.3
+  timeout: 30
+
+# Test Generation Settings
+test_generation:
+  coverage_threshold: 80.0
+  max_test_cases_per_function: 5
+  include_edge_cases: true
+  include_integration_tests: true
+  default_test_framework:
+    python: "pytest"
+    javascript: "jest"
+    typescript: "jest"
+    java: "junit"
+
+# Output Configuration
+output:
+  output_format: "files"  # files, stdout, json
+  test_file_prefix: "test_"
+  test_directory: "tests"
+
+# Language-Specific Settings
+languages:
+  python:
+    test_framework: "pytest"
+    file_extension: ".py"
+    import_style: "from module import function"
+    test_file_pattern: "test_*.py"
+    setup_imports:
+      - "import pytest"
+      - "from unittest.mock import Mock, patch"
+    assertion_style: "assert"
+  
+  javascript:
+    test_framework: "jest"
+    file_extension: ".js"
+    import_style: "const { function } = require(\"module\")"
+    test_file_pattern: "*.test.js"
+    setup_imports:
+      - "const { describe, test, expect, beforeEach, afterEach } = require(\"@jest/globals\")"
+    assertion_style: "expect"
+  
+  typescript:
+    test_framework: "jest"
+    file_extension: ".ts"
+    import_style: "import { function } from \"module\""
+    test_file_pattern: "*.test.ts"
+    setup_imports:
+      - "import { describe, test, expect, beforeEach, afterEach } from \"@jest/globals\""
+    assertion_style: "expect"
+  
+  java:
+    test_framework: "junit"
+    file_extension: ".java"
+    import_style: "import package.Class"
+    test_file_pattern: "*Test.java"
+    setup_imports:
+      - "import org.junit.Test"
+      - "import static org.junit.Assert.*"
+    assertion_style: "assert"
+
+# CI/CD Integration
+integration:
+  github_integration: false
+  auto_pr_comments: true
+  coverage_check_enabled: true
 
 # Code Analysis Settings
 analysis:
@@ -18,28 +83,6 @@ analysis:
     - javascript
     - typescript
     - java
-
-# Test Generation Settings
-test_generation:
-  generate_unit_tests: true
-  generate_integration_tests: true
-  generate_edge_case_tests: true
-  min_coverage_threshold: 80
-  max_tests_per_function: 5
-
-# Output Settings
-output:
-  format: "pytest"  # pytest, unittest, jest, junit
-  include_comments: true
-  include_docstrings: true
-  generate_coverage_report: true
-
-# GitHub Integration
-github:
-  enabled: false
-  auto_comment_prs: true
-  create_check_runs: true
-  min_coverage_for_success: 80
 
 # Logging
 logging:

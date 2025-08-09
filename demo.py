@@ -50,7 +50,7 @@ def main():
             console.print(Panel(
                 f"[bold]{example_test.name}[/bold]\n\n"
                 f"{example_test.test_code}",
-                title=f"{example_test.test_type.title()} Test"
+                title=f"{example_test.test_type.value.title()} Test"
             ))
         
     except Exception as e:

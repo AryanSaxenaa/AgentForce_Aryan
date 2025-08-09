@@ -3,12 +3,13 @@ Test Generator - Generates unit, integration, and edge test cases
 """
 from typing import List, Dict, Any
 from dataclasses import dataclass
-from analyzers.code_analyzer import AnalysisResult, FunctionInfo
+from src.analyzers.code_analyzer import AnalysisResult, FunctionInfo
+from src.interfaces.base_interfaces import TestType
 
 @dataclass
 class TestCase:
     name: str
-    test_type: str  # 'unit', 'integration', 'edge'
+    test_type: TestType
     function_name: str
     description: str
     test_code: str
@@ -63,7 +64,7 @@ class TestGenerator:
         test_code = template_func(function, 'basic', self._generate_basic_inputs(function))
         tests.append(TestCase(
             name=f"test_{function.name}_basic",
-            test_type='unit',
+            test_type=TestType.UNIT,
             function_name=function.name,
             description=f"Test basic functionality of {function.name}",
             test_code=test_code
@@ -75,7 +76,7 @@ class TestGenerator:
                 test_code = template_func(function, f'param_{i}', self._generate_param_variations(function, i))
                 tests.append(TestCase(
                     name=f"test_{function.name}_param_{arg}",
-                    test_type='unit',
+                    test_type=TestType.UNIT,
                     function_name=function.name,
                     description=f"Test {function.name} with different {arg} values",
                     test_code=test_code
@@ -94,7 +95,7 @@ class TestGenerator:
             test_code = template_func(function, scenario['type'], scenario['inputs'])
             tests.append(TestCase(
                 name=f"test_{function.name}_edge_{scenario['type']}",
-                test_type='edge',
+                test_type=TestType.EDGE,
                 function_name=function.name,
                 description=f"Test {function.name} edge case: {scenario['description']}",
                 test_code=test_code
@@ -111,7 +112,7 @@ class TestGenerator:
         test_code = template_func(function, 'integration', {})
         tests.append(TestCase(
             name=f"test_{function.name}_integration",
-            test_type='integration',
+            test_type=TestType.INTEGRATION,
             function_name=function.name,
             description=f"Integration test for {function.name}",
             test_code=test_code

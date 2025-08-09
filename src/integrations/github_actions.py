@@ -285,7 +285,7 @@ jobs:
         details += "### Test Types Generated\\n"
         test_types = {}
         for test in test_results['tests']:
-            test_types[test.test_type] = test_types.get(test.test_type, 0) + 1
+            test_types[test.test_type.value] = test_types.get(test.test_type.value, 0) + 1
         
         for test_type, count in test_types.items():
             details += f"- **{test_type.title()}:** {count} tests\\n"
