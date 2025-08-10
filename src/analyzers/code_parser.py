@@ -12,6 +12,7 @@ from ..interfaces.base_interfaces import (
     ICodeAnalyzer, CodeAnalysis, FunctionInfo, ClassInfo, Parameter,
     EdgeCase, Dependency, ComplexityMetrics
 )
+from .edge_case_detector import EdgeCaseDetector
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ class CodeParser(ICodeAnalyzer):
         """Initialize the parser with language support."""
         self.parsers: Dict[str, Parser] = {}
         self.languages: Dict[str, Language] = {}
+        self.edge_case_detector = EdgeCaseDetector()
         self._setup_languages()
     
     def _setup_languages(self):
@@ -178,7 +180,11 @@ class CodeParser(ICodeAnalyzer):
         edge_cases = []
         language = self._get_language_name(ast)
         
-        # Use language-specific edge case detection
+        # Use the EdgeCaseDetector for heuristic-based detection
+        heuristic_cases = self.edge_case_detector.detect(ast.source_code, language)
+        edge_cases.extend(heuristic_cases)
+        
+        # Also use AST-based language-specific edge case detection for more precise detection
         if language == 'python':
             edge_cases.extend(self._detect_python_edge_cases(ast))
         elif language in ['javascript', 'typescript']:
