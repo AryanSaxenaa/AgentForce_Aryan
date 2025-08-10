@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from src.analyzers.code_analyzer import AnalysisResult, FunctionInfo
 from src.interfaces.base_interfaces import TestType, TestCase, TestSuite, Language, IAIProvider, ITestGenerator
 from src.config.ai_provider_manager import AIProviderManager
+from .integration_test_generator import IntegrationTestGenerator
 
 class TestGenerator(ITestGenerator):
     """Generates comprehensive test cases based on code analysis with AI integration."""
@@ -13,6 +14,9 @@ class TestGenerator(ITestGenerator):
     def __init__(self, ai_provider_manager: Optional[AIProviderManager] = None):
         self.ai_provider_manager = ai_provider_manager or AIProviderManager()
         self.ai_provider = self.ai_provider_manager.get_provider()
+        
+        # Initialize specialized generators
+        self.integration_test_generator = IntegrationTestGenerator()
         
         # Language-specific test frameworks
         self.test_frameworks = {
@@ -89,20 +93,23 @@ class TestGenerator(ITestGenerator):
     
     def generate_integration_tests(self, dependencies: List) -> List[TestCase]:
         """Generate integration tests with mocking strategies (interface implementation)."""
-        # This is a simplified implementation for the interface
-        # In practice, this would analyze dependencies and create appropriate integration tests
-        test_cases = []
-        for dep in dependencies:
-            test_case = TestCase(
-                name=f"test_integration_{dep.name if hasattr(dep, 'name') else 'dependency'}",
-                test_type=TestType.INTEGRATION,
-                function_name="integration_test",
-                description=f"Integration test for {dep}",
-                test_code=self._generate_basic_integration_test(str(dep)),
-                requirements_covered=[]
-            )
-            test_cases.append(test_case)
-        return test_cases
+        # Import the correct FunctionInfo from interfaces
+        from ..interfaces.base_interfaces import FunctionInfo as InterfaceFunctionInfo, Parameter
+        
+        # Create a dummy function info for interface compatibility
+        dummy_function = InterfaceFunctionInfo(
+            name="integration_test_function",
+            parameters=[],
+            return_type="Any",
+            complexity=1,
+            line_range=(1, 10),
+            docstring="Integration test function"
+        )
+        
+        # Use the specialized integration test generator
+        return self.integration_test_generator.generate_integration_tests(
+            dummy_function, dependencies, "python"  # Default to Python for interface calls
+        )
     
     def generate_edge_case_tests(self, edge_cases: List) -> List[TestCase]:
         """Generate edge case tests for boundary conditions (interface implementation)."""
@@ -347,21 +354,17 @@ void tearDown() {
         return tests
     
     def _generate_integration_tests(self, function: FunctionInfo, analysis: AnalysisResult) -> List[TestCase]:
-        """Generate integration tests."""
-        tests = []
-        template_func = self.test_templates[analysis.language]['integration']
+        """Generate integration tests using the specialized IntegrationTestGenerator."""
+        # Extract dependencies from analysis
+        dependencies = getattr(analysis, 'dependencies', [])
+        edge_cases = getattr(analysis, 'edge_cases', [])
         
-        # Integration test for functions that interact with external systems
-        test_code = template_func(function, 'integration', {})
-        tests.append(TestCase(
-            name=f"test_{function.name}_integration",
-            test_type=TestType.INTEGRATION,
-            function_name=function.name,
-            description=f"Integration test for {function.name}",
-            test_code=test_code
-        ))
+        # Use the specialized integration test generator
+        integration_tests = self.integration_test_generator.generate_integration_tests(
+            function, dependencies, analysis.language, edge_cases
+        )
         
-        return tests
+        return integration_tests
     
     def _needs_integration_tests(self, function: FunctionInfo, analysis: AnalysisResult) -> bool:
         """Determine if function needs integration tests."""

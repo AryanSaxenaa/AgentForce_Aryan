@@ -187,11 +187,13 @@ class TestTestGenerator:
     
     def test_generate_integration_tests_interface_method(self, mock_ai_provider_manager):
         """Test the generate_integration_tests interface method."""
+        from src.interfaces.base_interfaces import Dependency
+        
         generator = TestGenerator(mock_ai_provider_manager)
         
-        mock_dependency = Mock()
-        mock_dependency.name = "database"
-        dependencies = [mock_dependency]
+        # Create a proper Dependency object instead of a Mock
+        test_dependency = Dependency(name="database", type="database", source="import database")
+        dependencies = [test_dependency]
         
         result = generator.generate_integration_tests(dependencies)
         
