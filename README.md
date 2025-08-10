@@ -2,6 +2,10 @@
 
 An AI-powered agent that analyzes code and generates comprehensive test cases for Python, Java, and JavaScript.
 
+• User Guide: docs/USER_GUIDE.md
+• API Reference: docs/API_REFERENCE.md
+• Examples: examples/README.md
+
 ## Features
 
 - **Multi-language Support**: Python, Java, JavaScript
@@ -39,6 +43,11 @@ test-generator-bot/
    export ANTHROPIC_API_KEY="your-api-key-here"
    ```
 3. Run: `python src/main.py --file your_code.py`
+
+Examples:
+- Python: `python src/main.py -f examples/sample_code.py -l python`
+- JavaScript (auto): `python src/main.py -f examples/sample_code.js`
+- Java (auto): `python src/main.py -f examples/Sample.java`
 
 ## AI Enhancement
 
