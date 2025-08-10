@@ -5,7 +5,7 @@ import os
 import yaml
 from typing import Dict, Any, Optional
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from src.interfaces.base_interfaces import IConfigurationManager, Language
 
 
@@ -21,7 +21,7 @@ class TestGeneratorConfig:
     ai_timeout: int = 30
     
     # Test Generation Configuration
-    default_test_framework: Dict[str, str] = None
+    default_test_framework: Dict[str, str] = field(default_factory=dict)
     coverage_threshold: float = 80.0
     max_test_cases_per_function: int = 5
     include_edge_cases: bool = True
@@ -38,7 +38,7 @@ class TestGeneratorConfig:
     coverage_check_enabled: bool = True
     
     def __post_init__(self):
-        if self.default_test_framework is None:
+        if not self.default_test_framework:
             self.default_test_framework = {
                 "python": "pytest",
                 "javascript": "jest",
@@ -55,6 +55,13 @@ class ConfigurationManager(IConfigurationManager):
         self.config = TestGeneratorConfig()
         self._config_data = self.load_config(self.config_path)
         self._apply_config()
+        # Load from .env if present to make API keys available
+        try:
+            from dotenv import load_dotenv  # type: ignore
+            load_dotenv()
+        except Exception:
+            pass
+
         self._load_from_env()
     
     def load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
@@ -328,44 +335,60 @@ class ConfigurationManager(IConfigurationManager):
     def _load_from_env(self) -> None:
         """Load configuration from environment variables."""
         # AI provider settings
-        if os.getenv('AI_PROVIDER'):
-            self.config.ai_provider = os.getenv('AI_PROVIDER')
-        if os.getenv('OPENAI_MODEL'):
-            self.config.openai_model = os.getenv('OPENAI_MODEL')
-        if os.getenv('ANTHROPIC_MODEL'):
-            self.config.anthropic_model = os.getenv('ANTHROPIC_MODEL')
+        ai_provider_val = os.getenv('AI_PROVIDER')
+        if ai_provider_val is not None:
+            self.config.ai_provider = ai_provider_val
+        openai_model_val = os.getenv('OPENAI_MODEL')
+        if openai_model_val is not None:
+            self.config.openai_model = openai_model_val
+        anthropic_model_val = os.getenv('ANTHROPIC_MODEL')
+        if anthropic_model_val is not None:
+            self.config.anthropic_model = anthropic_model_val
         
         # Numeric settings with validation
         try:
-            if os.getenv('AI_MAX_TOKENS'):
-                self.config.ai_max_tokens = int(os.getenv('AI_MAX_TOKENS'))
-            if os.getenv('AI_TEMPERATURE'):
-                self.config.ai_temperature = float(os.getenv('AI_TEMPERATURE'))
-            if os.getenv('AI_TIMEOUT'):
-                self.config.ai_timeout = int(os.getenv('AI_TIMEOUT'))
-            if os.getenv('COVERAGE_THRESHOLD'):
-                self.config.coverage_threshold = float(os.getenv('COVERAGE_THRESHOLD'))
-            if os.getenv('MAX_TEST_CASES_PER_FUNCTION'):
-                self.config.max_test_cases_per_function = int(os.getenv('MAX_TEST_CASES_PER_FUNCTION'))
+            ai_max_tokens_val = os.getenv('AI_MAX_TOKENS')
+            if ai_max_tokens_val is not None and ai_max_tokens_val != "":
+                self.config.ai_max_tokens = int(ai_max_tokens_val)
+            ai_temp_val = os.getenv('AI_TEMPERATURE')
+            if ai_temp_val is not None and ai_temp_val != "":
+                self.config.ai_temperature = float(ai_temp_val)
+            ai_timeout_val = os.getenv('AI_TIMEOUT')
+            if ai_timeout_val is not None and ai_timeout_val != "":
+                self.config.ai_timeout = int(ai_timeout_val)
+            coverage_threshold_val = os.getenv('COVERAGE_THRESHOLD')
+            if coverage_threshold_val is not None and coverage_threshold_val != "":
+                self.config.coverage_threshold = float(coverage_threshold_val)
+            max_tests_val = os.getenv('MAX_TEST_CASES_PER_FUNCTION')
+            if max_tests_val is not None and max_tests_val != "":
+                self.config.max_test_cases_per_function = int(max_tests_val)
         except ValueError:
             pass  # Keep defaults if invalid values
         
         # Boolean settings
-        if os.getenv('INCLUDE_EDGE_CASES'):
-            self.config.include_edge_cases = os.getenv('INCLUDE_EDGE_CASES').lower() in ('true', '1', 'yes')
-        if os.getenv('INCLUDE_INTEGRATION_TESTS'):
-            self.config.include_integration_tests = os.getenv('INCLUDE_INTEGRATION_TESTS').lower() in ('true', '1', 'yes')
-        if os.getenv('GITHUB_INTEGRATION'):
-            self.config.github_integration = os.getenv('GITHUB_INTEGRATION').lower() in ('true', '1', 'yes')
-        if os.getenv('AUTO_PR_COMMENTS'):
-            self.config.auto_pr_comments = os.getenv('AUTO_PR_COMMENTS').lower() in ('true', '1', 'yes')
-        if os.getenv('COVERAGE_CHECK_ENABLED'):
-            self.config.coverage_check_enabled = os.getenv('COVERAGE_CHECK_ENABLED').lower() in ('true', '1', 'yes')
+        include_edge_cases_val = os.getenv('INCLUDE_EDGE_CASES')
+        if include_edge_cases_val is not None:
+            self.config.include_edge_cases = include_edge_cases_val.lower() in ('true', '1', 'yes')
+        include_integration_val = os.getenv('INCLUDE_INTEGRATION_TESTS')
+        if include_integration_val is not None:
+            self.config.include_integration_tests = include_integration_val.lower() in ('true', '1', 'yes')
+        github_integration_val = os.getenv('GITHUB_INTEGRATION')
+        if github_integration_val is not None:
+            self.config.github_integration = github_integration_val.lower() in ('true', '1', 'yes')
+        auto_pr_comments_val = os.getenv('AUTO_PR_COMMENTS')
+        if auto_pr_comments_val is not None:
+            self.config.auto_pr_comments = auto_pr_comments_val.lower() in ('true', '1', 'yes')
+        coverage_check_val = os.getenv('COVERAGE_CHECK_ENABLED')
+        if coverage_check_val is not None:
+            self.config.coverage_check_enabled = coverage_check_val.lower() in ('true', '1', 'yes')
         
         # String settings
-        if os.getenv('OUTPUT_FORMAT'):
-            self.config.output_format = os.getenv('OUTPUT_FORMAT')
-        if os.getenv('TEST_FILE_PREFIX'):
-            self.config.test_file_prefix = os.getenv('TEST_FILE_PREFIX')
-        if os.getenv('TEST_DIRECTORY'):
-            self.config.test_directory = os.getenv('TEST_DIRECTORY')
+        output_format_val = os.getenv('OUTPUT_FORMAT')
+        if output_format_val is not None:
+            self.config.output_format = output_format_val
+        test_file_prefix_val = os.getenv('TEST_FILE_PREFIX')
+        if test_file_prefix_val is not None:
+            self.config.test_file_prefix = test_file_prefix_val
+        test_directory_val = os.getenv('TEST_DIRECTORY')
+        if test_directory_val is not None:
+            self.config.test_directory = test_directory_val
