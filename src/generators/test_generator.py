@@ -51,6 +51,15 @@ class TestGenerator(ITestGenerator):
         # Get AI analysis of the code patterns
         ai_analysis = self._get_ai_code_analysis(analysis)
         
+        # Normalize function parameters: support analyzer FunctionInfo that exposes 'args'
+        for function in analysis.functions:
+            if not hasattr(function, 'parameters'):
+                try:
+                    arg_names = getattr(function, 'args', []) or []
+                    function.parameters = [Parameter(name=n) for n in arg_names]
+                except Exception:
+                    function.parameters = []
+
         for function in analysis.functions:
             # Generate unit tests
             unit_tests = self._generate_unit_tests(function, analysis)
@@ -217,8 +226,9 @@ class TestGenerator(ITestGenerator):
         
         # Add function signatures
         for func in analysis.functions[:3]:  # Limit to first 3 functions
-            if hasattr(func, 'parameters') and func.parameters:
-                params_str = ", ".join([param.name for param in func.parameters])
+            names = self._get_param_names(func)
+            if names:
+                params_str = ", ".join(names)
                 code_lines.append(f"def {func.name}({params_str}):")
             else:
                 code_lines.append(f"def {func.name}():")
@@ -230,6 +240,19 @@ class TestGenerator(ITestGenerator):
             code_lines.append("")
         
         return "\n".join(code_lines)
+
+    def _get_param_names(self, function: FunctionInfo) -> list:
+        """Return a list of parameter names for a function from either .parameters or .args."""
+        params = getattr(function, 'parameters', None)
+        if params is not None:
+            try:
+                return [p.name for p in params if hasattr(p, 'name')]
+            except Exception:
+                return []
+        args = getattr(function, 'args', None)
+        if isinstance(args, list):
+            return [str(a) for a in args]
+        return []
     
     def _identify_performance_risks(self, analysis: AnalysisResult) -> List[str]:
         """Identify performance risks from analysis."""
@@ -321,14 +344,15 @@ void tearDown() {
         ))
         
         # Test with different input types if function has parameters
-        if function.parameters:
-            for i, param in enumerate(function.parameters):
+        names = self._get_param_names(function)
+        if names:
+            for i, pname in enumerate(names):
                 test_code = template_func(function, f'param_{i}', self._generate_param_variations(function, i))
                 tests.append(TestCase(
-                    name=f"test_{function.name}_param_{param.name}",
+                    name=f"test_{function.name}_param_{pname}",
                     test_type=TestType.UNIT,
                     function_name=function.name,
-                    description=f"Test {function.name} with different {param.name} values",
+                    description=f"Test {function.name} with different {pname} values",
                     test_code=test_code
                 ))
         
@@ -360,9 +384,23 @@ void tearDown() {
         edge_cases = getattr(analysis, 'edge_cases', [])
         
         # Use the specialized integration test generator
-        integration_tests = self.integration_test_generator.generate_integration_tests(
-            function, dependencies, analysis.language, edge_cases
-        )
+        # Adapt analyzer FunctionInfo to interface FunctionInfo expected by the integration generator
+        try:
+            from ..interfaces.base_interfaces import FunctionInfo as IFFunctionInfo, Parameter as IFParameter
+            param_names = self._get_param_names(function)
+            iface_func = IFFunctionInfo(
+                name=function.name,
+                parameters=[IFParameter(name=n) for n in param_names],
+                return_type=getattr(function, 'return_type', None),
+                complexity=getattr(function, 'complexity', 1),
+                line_range=(getattr(function, 'line_start', 1), getattr(function, 'line_end', 1)),
+                docstring=getattr(function, 'docstring', None)
+            )
+            integration_tests = self.integration_test_generator.generate_integration_tests(
+                iface_func, dependencies, analysis.language, edge_cases
+            )
+        except Exception:
+            integration_tests = []
         
         return integration_tests
     
@@ -383,18 +421,19 @@ void tearDown() {
         context = self._analyze_function_context(function)
         
         # Context-aware edge cases based on function domain
-        if function.parameters:
+        names = self._get_param_names(function)
+        if names:
             # Always include null input test
             scenarios.append({
                 'type': 'null_input',
                 'description': f'null/None input values in {context["domain"]} context',
-                'inputs': {param.name: None for param in function.parameters}
+                'inputs': {name: None for name in names}
             })
             
             # Domain-specific empty input scenarios
             empty_inputs = {}
-            for param in function.parameters:
-                empty_inputs[param.name] = self._get_context_aware_empty_value(param.name, context, analysis.language)
+            for pname in names:
+                empty_inputs[pname] = self._get_context_aware_empty_value(pname, context, analysis.language)
             
             scenarios.append({
                 'type': 'empty_input',
@@ -408,12 +447,12 @@ void tearDown() {
                 {
                     'type': 'negative_numbers',
                     'description': 'negative number inputs',
-                    'inputs': {param.name: -1 for param in function.parameters if 'num' in param.name.lower()}
+                    'inputs': {pname: -1 for pname in names if 'num' in pname.lower()}
                 },
                 {
                     'type': 'zero_values',
                     'description': 'zero value inputs',
-                    'inputs': {param.name: 0 for param in function.parameters if 'num' in param.name.lower()}
+                    'inputs': {pname: 0 for pname in names if 'num' in pname.lower()}
                 }
             ])
             
@@ -422,14 +461,14 @@ void tearDown() {
                 {
                     'type': 'special_characters',
                     'description': 'special characters and unicode',
-                    'inputs': {param.name: "!@#$%^&*()_+{}|:<>?[]\\;'\",./" if 'str' in param.name.lower() or 'text' in param.name.lower() else param.name 
-                              for param in function.parameters}
+                    'inputs': {pname: "!@#$%^&*()_+{}|:<>?[]\\;'\",./" if 'str' in pname.lower() or 'text' in pname.lower() else pname 
+                              for pname in names}
                 },
                 {
                     'type': 'very_long_string',
                     'description': 'extremely long string input',
-                    'inputs': {param.name: "x" * 10000 if 'str' in param.name.lower() or 'text' in param.name.lower() else param.name 
-                              for param in function.parameters}
+                    'inputs': {pname: "x" * 10000 if 'str' in pname.lower() or 'text' in pname.lower() else pname 
+                              for pname in names}
                 }
             ])
             
@@ -438,20 +477,21 @@ void tearDown() {
                 {
                     'type': 'single_element',
                     'description': 'single element collection',
-                    'inputs': {param.name: [1] if 'list' in param.name.lower() or 'arr' in param.name.lower() else param.name 
-                              for param in function.parameters}
+                    'inputs': {pname: [1] if 'list' in pname.lower() or 'arr' in pname.lower() else pname 
+                              for pname in names}
                 },
                 {
                     'type': 'large_collection',
                     'description': 'very large collection',
-                    'inputs': {param.name: list(range(10000)) if 'list' in param.name.lower() or 'arr' in param.name.lower() else param.name 
-                              for param in function.parameters}
+                    'inputs': {pname: list(range(10000)) if 'list' in pname.lower() or 'arr' in pname.lower() else pname 
+                              for pname in names}
                 }
             ])
         
         # Add scenarios based on detected edge cases from analysis
         for edge_case in analysis.edge_cases:
-            edge_case_str = str(edge_case.description if hasattr(edge_case, 'description') else edge_case).lower()
+            desc = getattr(edge_case, 'description', None)
+            edge_case_str = str(desc if desc is not None else edge_case).lower()
             if 'division' in edge_case_str:
                 scenarios.append({
                     'type': 'division_by_zero',
@@ -468,8 +508,8 @@ void tearDown() {
                 scenarios.append({
                     'type': 'file_not_found',
                     'description': 'file not found scenario',
-                    'inputs': {param.name: 'nonexistent_file.txt' if 'file' in param.name.lower() or 'path' in param.name.lower() else param.name 
-                              for param in function.parameters}
+                    'inputs': {pname: 'nonexistent_file.txt' if 'file' in pname.lower() or 'path' in pname.lower() else pname 
+                              for pname in names}
                 })
         
         return scenarios
@@ -481,14 +521,17 @@ void tearDown() {
         # Analyze function context for smarter input generation
         function_context = self._analyze_function_context(function)
         
-        for param in function.parameters:
-            inputs[param.name] = self._get_context_aware_value(param.name, function_context)
+        for pname in self._get_param_names(function):
+            inputs[pname] = self._get_context_aware_value(pname, function_context)
         return inputs
     
     def _generate_param_variations(self, function: FunctionInfo, param_index: int) -> Dict[str, Any]:
         """Generate parameter variations for testing."""
         inputs = self._generate_basic_inputs(function)
-        param_name = function.parameters[param_index].name
+        names = self._get_param_names(function)
+        if not names or param_index >= len(names):
+            return inputs
+        param_name = names[param_index]
         
         # Generate different values based on parameter name
         if 'num' in param_name.lower() or 'count' in param_name.lower():
@@ -635,17 +678,17 @@ void tearDown() {
         """Generate inputs that might cause division by zero."""
         inputs = self._generate_basic_inputs(function)
         # Look for parameters that might be divisors
-        for param in function.parameters:
-            if 'divisor' in param.name.lower() or 'denom' in param.name.lower():
-                inputs[param.name] = 0
+        for pname in self._get_param_names(function):
+            if 'divisor' in pname.lower() or 'denom' in pname.lower() or 'denominator' in pname.lower():
+                inputs[pname] = 0
         return inputs
     
     def _generate_index_error_inputs(self, function: FunctionInfo) -> Dict[str, Any]:
         """Generate inputs that might cause index errors."""
         inputs = self._generate_basic_inputs(function)
-        for param in function.parameters:
-            if 'index' in param.name.lower() or 'idx' in param.name.lower():
-                inputs[param.name] = -1  # Negative index
+        for pname in self._get_param_names(function):
+            if 'index' in pname.lower() or 'idx' in pname.lower():
+                inputs[pname] = -1  # Negative index
         return inputs
     
     # Template functions for different languages

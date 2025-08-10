@@ -53,7 +53,21 @@ class TestGeneratorAgent(ITestGeneratorAgent):
         
         # Step 3: Generate initial test cases
         console.print("[yellow]🧪 Generating test cases...[/yellow]")
-        self.current_tests = self.generator.generate_tests(self.current_analysis)
+        generated = self.generator.generate_tests(self.current_analysis)
+        # Support generators that return a TestSuite or a raw list
+        try:
+            # Prefer attribute access to avoid import cycles
+            test_cases = getattr(generated, 'test_cases', None)
+            self.current_tests = list(test_cases) if test_cases is not None else list(generated)
+        except TypeError:
+            # Fallback if generated is not iterable
+            self.current_tests = []
+        # Final safety: coerce any remaining container into a list of tests
+        if not isinstance(self.current_tests, list) and hasattr(self.current_tests, 'test_cases'):
+            try:
+                self.current_tests = list(getattr(self.current_tests, 'test_cases'))
+            except Exception:
+                self.current_tests = []
         
         # Step 4: Enhance tests with AI insights
         console.print("[yellow]🤖 Enhancing tests with AI insights...[/yellow]")
