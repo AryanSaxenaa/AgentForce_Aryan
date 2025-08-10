@@ -8,6 +8,9 @@ from src.interfaces.base_interfaces import (
     ICoverageAnalyzer, TestSuite, TestCase, CoverageReport, CoverageGap,
     FunctionInfo, TestType
 )
+from src.analyzers.coverage_gap_detector import (
+    CoverageGapDetector, DetailedCoverageReport, DetailedCoverageGap
+)
 
 
 @dataclass
@@ -28,6 +31,7 @@ class CoverageAnalyzer(ICoverageAnalyzer):
     
     def __init__(self):
         """Initialize the coverage analyzer."""
+        self.gap_detector = CoverageGapDetector()
         self._executable_patterns = {
             'python': [
                 r'^\s*def\s+\w+',  # Function definitions
@@ -164,6 +168,68 @@ class CoverageAnalyzer(ICoverageAnalyzer):
             suggested_tests.append(test_case)
         
         return suggested_tests
+    
+    def generate_detailed_coverage_report(self, tests: TestSuite, code: str, 
+                                        functions: List[FunctionInfo]) -> DetailedCoverageReport:
+        """
+        Generate a comprehensive coverage report with detailed gap analysis.
+        
+        Args:
+            tests: Test suite containing generated test cases
+            code: Source code to analyze coverage for
+            functions: List of function information from code analysis
+            
+        Returns:
+            DetailedCoverageReport with comprehensive metrics and recommendations
+        """
+        # Parse code into lines with metadata
+        lines = self._parse_code_lines(code, tests.language.value)
+        
+        # Map test cases to covered functions and lines
+        covered_functions = self._map_test_coverage(tests, lines)
+        
+        # Calculate line coverage
+        line_coverage = self._calculate_line_coverage(lines, covered_functions)
+        
+        # Use gap detector for comprehensive analysis
+        return self.gap_detector.generate_detailed_report(
+            code, tests.language.value, covered_functions, line_coverage, functions
+        )
+    
+    def detect_advanced_gaps(self, tests: TestSuite, code: str, 
+                           functions: List[FunctionInfo]) -> List[DetailedCoverageGap]:
+        """
+        Detect advanced coverage gaps using the gap detector.
+        
+        Args:
+            tests: Test suite containing generated test cases
+            code: Source code to analyze
+            functions: List of function information
+            
+        Returns:
+            List of detailed coverage gaps
+        """
+        # Parse code and calculate coverage
+        lines = self._parse_code_lines(code, tests.language.value)
+        covered_functions = self._map_test_coverage(tests, lines)
+        line_coverage = self._calculate_line_coverage(lines, covered_functions)
+        
+        # Use gap detector for advanced analysis
+        return self.gap_detector.detect_coverage_gaps(
+            code, tests.language.value, covered_functions, line_coverage, functions
+        )
+    
+    def suggest_improved_tests(self, gaps: List[DetailedCoverageGap]) -> List[TestCase]:
+        """
+        Generate improved test suggestions using the gap detector.
+        
+        Args:
+            gaps: List of detailed coverage gaps
+            
+        Returns:
+            List of improved test case suggestions
+        """
+        return self.gap_detector.suggest_test_improvements(gaps)
     
     def _parse_code_lines(self, code: str, language: str) -> List[LineInfo]:
         """Parse code into lines with executable metadata."""

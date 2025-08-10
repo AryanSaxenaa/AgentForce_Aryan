@@ -7,6 +7,7 @@ from .edge_case_detector import EdgeCaseDetector
 from .dependency_analyzer import DependencyAnalyzer
 from .complexity_analyzer import ComplexityAnalyzer
 from .coverage_analyzer import CoverageAnalyzer
+from .coverage_gap_detector import CoverageGapDetector, DetailedCoverageReport, DetailedCoverageGap
 from .analysis_orchestrator import AnalysisOrchestrator
 
 __all__ = [
@@ -17,5 +18,8 @@ __all__ = [
 	"DependencyAnalyzer",
 	"ComplexityAnalyzer",
 	"CoverageAnalyzer",
+	"CoverageGapDetector",
+	"DetailedCoverageReport",
+	"DetailedCoverageGap",
 	"AnalysisOrchestrator",
 ]
