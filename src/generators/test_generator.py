@@ -1,25 +1,27 @@
 """
-Test Generator - Generates unit, integration, and edge test cases
+Test Generator - Generates unit, integration, and edge test cases with AI integration
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from src.analyzers.code_analyzer import AnalysisResult, FunctionInfo
-from src.interfaces.base_interfaces import TestType
+from src.interfaces.base_interfaces import TestType, TestCase, TestSuite, Language, IAIProvider, ITestGenerator
+from src.config.ai_provider_manager import AIProviderManager
 
-@dataclass
-class TestCase:
-    name: str
-    test_type: TestType
-    function_name: str
-    description: str
-    test_code: str
-    setup_code: str = ""
-    assertions: List[str] = None
-
-class TestGenerator:
-    """Generates comprehensive test cases based on code analysis."""
+class TestGenerator(ITestGenerator):
+    """Generates comprehensive test cases based on code analysis with AI integration."""
     
-    def __init__(self):
+    def __init__(self, ai_provider_manager: Optional[AIProviderManager] = None):
+        self.ai_provider_manager = ai_provider_manager or AIProviderManager()
+        self.ai_provider = self.ai_provider_manager.get_provider()
+        
+        # Language-specific test frameworks
+        self.test_frameworks = {
+            'python': 'pytest',
+            'javascript': 'jest',
+            'typescript': 'jest',
+            'java': 'junit'
+        }
+        
         self.test_templates = {
             'python': {
                 'unit': self._python_unit_template,
@@ -38,22 +40,263 @@ class TestGenerator:
             }
         }
     
-    def generate_tests(self, analysis: AnalysisResult) -> List[TestCase]:
-        """Generate comprehensive test cases from analysis results."""
+    def generate_tests(self, analysis: AnalysisResult) -> TestSuite:
+        """Generate comprehensive test cases from analysis results with AI enhancement."""
         test_cases = []
+        
+        # Get AI analysis of the code patterns
+        ai_analysis = self._get_ai_code_analysis(analysis)
         
         for function in analysis.functions:
             # Generate unit tests
-            test_cases.extend(self._generate_unit_tests(function, analysis))
+            unit_tests = self._generate_unit_tests(function, analysis)
+            test_cases.extend(self._enhance_tests_with_ai(unit_tests, analysis, ai_analysis))
             
             # Generate edge case tests
-            test_cases.extend(self._generate_edge_tests(function, analysis))
+            edge_tests = self._generate_edge_tests(function, analysis)
+            test_cases.extend(self._enhance_tests_with_ai(edge_tests, analysis, ai_analysis))
             
             # Generate integration tests if applicable
             if self._needs_integration_tests(function, analysis):
-                test_cases.extend(self._generate_integration_tests(function, analysis))
+                integration_tests = self._generate_integration_tests(function, analysis)
+                test_cases.extend(self._enhance_tests_with_ai(integration_tests, analysis, ai_analysis))
         
+        # Create test suite
+        language = Language(analysis.language.lower())
+        framework = self.test_frameworks.get(analysis.language.lower(), 'unknown')
+        
+        return TestSuite(
+            language=language,
+            framework=framework,
+            test_cases=test_cases,
+            setup_code=self._generate_setup_code_for_language(analysis.language),
+            teardown_code=self._generate_teardown_code_for_language(analysis.language)
+        )
+    
+    def generate_unit_tests(self, functions: List[FunctionInfo]) -> List[TestCase]:
+        """Generate unit tests for functions (interface implementation)."""
+        test_cases = []
+        for function in functions:
+            # Create a minimal analysis result for compatibility
+            analysis = type('AnalysisResult', (), {
+                'language': 'python',  # Default language
+                'functions': [function],
+                'edge_cases': [],
+                'imports': []
+            })()
+            test_cases.extend(self._generate_unit_tests(function, analysis))
         return test_cases
+    
+    def generate_integration_tests(self, dependencies: List) -> List[TestCase]:
+        """Generate integration tests with mocking strategies (interface implementation)."""
+        # This is a simplified implementation for the interface
+        # In practice, this would analyze dependencies and create appropriate integration tests
+        test_cases = []
+        for dep in dependencies:
+            test_case = TestCase(
+                name=f"test_integration_{dep.name if hasattr(dep, 'name') else 'dependency'}",
+                test_type=TestType.INTEGRATION,
+                function_name="integration_test",
+                description=f"Integration test for {dep}",
+                test_code=self._generate_basic_integration_test(str(dep)),
+                requirements_covered=[]
+            )
+            test_cases.append(test_case)
+        return test_cases
+    
+    def generate_edge_case_tests(self, edge_cases: List) -> List[TestCase]:
+        """Generate edge case tests for boundary conditions (interface implementation)."""
+        test_cases = []
+        for edge_case in edge_cases:
+            test_case = TestCase(
+                name=f"test_edge_{edge_case.type if hasattr(edge_case, 'type') else 'case'}",
+                test_type=TestType.EDGE,
+                function_name="edge_test",
+                description=f"Edge case test for {edge_case}",
+                test_code=self._generate_basic_edge_test(str(edge_case)),
+                requirements_covered=[]
+            )
+            test_cases.append(test_case)
+        return test_cases
+    
+    def format_tests(self, tests: List[TestCase], language: Language) -> str:
+        """Format tests according to language-specific frameworks (interface implementation)."""
+        framework = self.test_frameworks.get(language.value, 'unknown')
+        formatted_tests = []
+        
+        # Add framework-specific imports and setup
+        if language == Language.PYTHON:
+            formatted_tests.append("import pytest")
+            formatted_tests.append("from unittest.mock import Mock, patch")
+            formatted_tests.append("")
+        elif language == Language.JAVASCRIPT:
+            formatted_tests.append("const { describe, test, expect, jest } = require('@jest/globals');")
+            formatted_tests.append("")
+        elif language == Language.JAVA:
+            formatted_tests.append("import org.junit.jupiter.api.Test;")
+            formatted_tests.append("import org.junit.jupiter.api.BeforeEach;")
+            formatted_tests.append("import org.junit.jupiter.api.AfterEach;")
+            formatted_tests.append("import static org.junit.jupiter.api.Assertions.*;")
+            formatted_tests.append("")
+        
+        # Add each test case
+        for test in tests:
+            formatted_tests.append(test.test_code)
+            formatted_tests.append("")
+        
+        return "\n".join(formatted_tests)
+    
+    def _get_ai_code_analysis(self, analysis: AnalysisResult) -> Dict[str, Any]:
+        """Get AI analysis of code patterns for enhanced test generation."""
+        try:
+            # Reconstruct code snippet from analysis for AI analysis
+            code_snippet = self._reconstruct_code_from_analysis(analysis)
+            ai_result = self.ai_provider.analyze_code_patterns(code_snippet, analysis.language)
+            return ai_result
+        except Exception as e:
+            print(f"Warning: AI analysis failed: {e}")
+            return {'analysis': 'AI analysis unavailable', 'provider': 'none'}
+    
+    def _enhance_tests_with_ai(self, test_cases: List[TestCase], analysis: AnalysisResult, 
+                              ai_analysis: Dict[str, Any]) -> List[TestCase]:
+        """Enhance test cases using AI provider."""
+        enhanced_tests = []
+        
+        for test in test_cases:
+            try:
+                # Create context for AI enhancement
+                context = {
+                    'language': analysis.language,
+                    'edge_cases': [str(ec) for ec in analysis.edge_cases],
+                    'performance_risks': self._identify_performance_risks(analysis),
+                    'ai_insights': ai_analysis.get('analysis', '')
+                }
+                
+                # Get AI enhancement
+                enhancement = self.ai_provider.enhance_test_case(test, context)
+                
+                if enhancement:
+                    # Apply AI enhancements
+                    enhanced_test = TestCase(
+                        name=test.name,
+                        test_type=test.test_type,
+                        function_name=test.function_name,
+                        description=enhancement.get('description', test.description),
+                        test_code=enhancement.get('code', test.test_code),
+                        setup_code=test.setup_code,
+                        teardown_code=test.teardown_code,
+                        assertions=enhancement.get('assertions', test.assertions),
+                        requirements_covered=test.requirements_covered
+                    )
+                    enhanced_tests.append(enhanced_test)
+                else:
+                    enhanced_tests.append(test)
+                    
+            except Exception as e:
+                print(f"Warning: AI enhancement failed for {test.name}: {e}")
+                enhanced_tests.append(test)
+        
+        return enhanced_tests
+    
+    def _reconstruct_code_from_analysis(self, analysis: AnalysisResult) -> str:
+        """Reconstruct a code snippet from analysis results for AI processing."""
+        code_lines = []
+        
+        # Add imports
+        if hasattr(analysis, 'imports') and analysis.imports:
+            for imp in analysis.imports[:5]:  # Limit to first 5 imports
+                code_lines.append(imp)
+            code_lines.append("")
+        
+        # Add function signatures
+        for func in analysis.functions[:3]:  # Limit to first 3 functions
+            if hasattr(func, 'parameters') and func.parameters:
+                params_str = ", ".join([param.name for param in func.parameters])
+                code_lines.append(f"def {func.name}({params_str}):")
+            else:
+                code_lines.append(f"def {func.name}():")
+            
+            if hasattr(func, 'docstring') and func.docstring:
+                code_lines.append(f'    """{func.docstring}"""')
+            
+            code_lines.append("    # Function implementation")
+            code_lines.append("")
+        
+        return "\n".join(code_lines)
+    
+    def _identify_performance_risks(self, analysis: AnalysisResult) -> List[str]:
+        """Identify performance risks from analysis."""
+        risks = []
+        
+        for func in analysis.functions:
+            if hasattr(func, 'complexity') and func.complexity > 10:
+                risks.append(f"High complexity in {func.name}")
+            
+            # Check for potential performance issues in function names
+            if any(keyword in func.name.lower() for keyword in ['loop', 'recursive', 'sort', 'search']):
+                risks.append(f"Potential performance concern in {func.name}")
+        
+        return risks
+    
+    def _generate_setup_code_for_language(self, language: str) -> Optional[str]:
+        """Generate language-specific setup code."""
+        if language.lower() == 'python':
+            return """# Test setup
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))"""
+        elif language.lower() in ['javascript', 'typescript']:
+            return """// Test setup
+beforeEach(() => {
+    // Setup code here
+});"""
+        elif language.lower() == 'java':
+            return """@BeforeEach
+void setUp() {
+    // Setup code here
+}"""
+        return None
+    
+    def _generate_teardown_code_for_language(self, language: str) -> Optional[str]:
+        """Generate language-specific teardown code."""
+        if language.lower() == 'python':
+            return """# Test teardown
+# Cleanup code here"""
+        elif language.lower() in ['javascript', 'typescript']:
+            return """afterEach(() => {
+    // Cleanup code here
+});"""
+        elif language.lower() == 'java':
+            return """@AfterEach
+void tearDown() {
+    // Cleanup code here
+}"""
+        return None
+    
+    def _generate_basic_integration_test(self, dependency: str) -> str:
+        """Generate a basic integration test template."""
+        return f"""def test_integration_{dependency.lower().replace(' ', '_')}():
+    \"\"\"Integration test for {dependency}.\"\"\"
+    # Arrange
+    # Set up integration test environment
+    
+    # Act
+    # Call method that integrates with {dependency}
+    
+    # Assert
+    # Verify integration behavior
+    assert True  # Replace with actual assertions"""
+    
+    def _generate_basic_edge_test(self, edge_case: str) -> str:
+        """Generate a basic edge case test template."""
+        return f"""def test_edge_{edge_case.lower().replace(' ', '_')}():
+    \"\"\"Edge case test for {edge_case}.\"\"\"
+    # Arrange
+    # Set up edge case scenario
+    
+    # Act & Assert
+    # Test edge case behavior
+    assert True  # Replace with actual assertions"""
     
     def _generate_unit_tests(self, function: FunctionInfo, analysis: AnalysisResult) -> List[TestCase]:
         """Generate unit tests for a function."""
@@ -71,14 +314,14 @@ class TestGenerator:
         ))
         
         # Test with different input types if function has parameters
-        if function.args:
-            for i, arg in enumerate(function.args):
+        if function.parameters:
+            for i, param in enumerate(function.parameters):
                 test_code = template_func(function, f'param_{i}', self._generate_param_variations(function, i))
                 tests.append(TestCase(
-                    name=f"test_{function.name}_param_{arg}",
+                    name=f"test_{function.name}_param_{param.name}",
                     test_type=TestType.UNIT,
                     function_name=function.name,
-                    description=f"Test {function.name} with different {arg} values",
+                    description=f"Test {function.name} with different {param.name} values",
                     test_code=test_code
                 ))
         
@@ -137,18 +380,18 @@ class TestGenerator:
         context = self._analyze_function_context(function)
         
         # Context-aware edge cases based on function domain
-        if function.args:
+        if function.parameters:
             # Always include null input test
             scenarios.append({
                 'type': 'null_input',
                 'description': f'null/None input values in {context["domain"]} context',
-                'inputs': {arg: None for arg in function.args}
+                'inputs': {param.name: None for param in function.parameters}
             })
             
             # Domain-specific empty input scenarios
             empty_inputs = {}
-            for arg in function.args:
-                empty_inputs[arg] = self._get_context_aware_empty_value(arg, context, analysis.language)
+            for param in function.parameters:
+                empty_inputs[param.name] = self._get_context_aware_empty_value(param.name, context, analysis.language)
             
             scenarios.append({
                 'type': 'empty_input',
@@ -162,12 +405,12 @@ class TestGenerator:
                 {
                     'type': 'negative_numbers',
                     'description': 'negative number inputs',
-                    'inputs': {arg: -1 for arg in function.args if 'num' in arg.lower()}
+                    'inputs': {param.name: -1 for param in function.parameters if 'num' in param.name.lower()}
                 },
                 {
                     'type': 'zero_values',
                     'description': 'zero value inputs',
-                    'inputs': {arg: 0 for arg in function.args if 'num' in arg.lower()}
+                    'inputs': {param.name: 0 for param in function.parameters if 'num' in param.name.lower()}
                 }
             ])
             
@@ -176,14 +419,14 @@ class TestGenerator:
                 {
                     'type': 'special_characters',
                     'description': 'special characters and unicode',
-                    'inputs': {arg: "!@#$%^&*()_+{}|:<>?[]\\;'\",./" if 'str' in arg.lower() or 'text' in arg.lower() else arg 
-                              for arg in function.args}
+                    'inputs': {param.name: "!@#$%^&*()_+{}|:<>?[]\\;'\",./" if 'str' in param.name.lower() or 'text' in param.name.lower() else param.name 
+                              for param in function.parameters}
                 },
                 {
                     'type': 'very_long_string',
                     'description': 'extremely long string input',
-                    'inputs': {arg: "x" * 10000 if 'str' in arg.lower() or 'text' in arg.lower() else arg 
-                              for arg in function.args}
+                    'inputs': {param.name: "x" * 10000 if 'str' in param.name.lower() or 'text' in param.name.lower() else param.name 
+                              for param in function.parameters}
                 }
             ])
             
@@ -192,37 +435,38 @@ class TestGenerator:
                 {
                     'type': 'single_element',
                     'description': 'single element collection',
-                    'inputs': {arg: [1] if 'list' in arg.lower() or 'arr' in arg.lower() else arg 
-                              for arg in function.args}
+                    'inputs': {param.name: [1] if 'list' in param.name.lower() or 'arr' in param.name.lower() else param.name 
+                              for param in function.parameters}
                 },
                 {
                     'type': 'large_collection',
                     'description': 'very large collection',
-                    'inputs': {arg: list(range(10000)) if 'list' in arg.lower() or 'arr' in arg.lower() else arg 
-                              for arg in function.args}
+                    'inputs': {param.name: list(range(10000)) if 'list' in param.name.lower() or 'arr' in param.name.lower() else param.name 
+                              for param in function.parameters}
                 }
             ])
         
         # Add scenarios based on detected edge cases from analysis
         for edge_case in analysis.edge_cases:
-            if 'division' in edge_case.lower():
+            edge_case_str = str(edge_case.description if hasattr(edge_case, 'description') else edge_case).lower()
+            if 'division' in edge_case_str:
                 scenarios.append({
                     'type': 'division_by_zero',
                     'description': 'division by zero scenario',
                     'inputs': self._generate_division_zero_inputs(function)
                 })
-            elif 'index' in edge_case.lower():
+            elif 'index' in edge_case_str:
                 scenarios.append({
                     'type': 'index_error',
                     'description': 'index out of bounds scenario',
                     'inputs': self._generate_index_error_inputs(function)
                 })
-            elif 'file' in edge_case.lower():
+            elif 'file' in edge_case_str:
                 scenarios.append({
                     'type': 'file_not_found',
                     'description': 'file not found scenario',
-                    'inputs': {arg: 'nonexistent_file.txt' if 'file' in arg.lower() or 'path' in arg.lower() else arg 
-                              for arg in function.args}
+                    'inputs': {param.name: 'nonexistent_file.txt' if 'file' in param.name.lower() or 'path' in param.name.lower() else param.name 
+                              for param in function.parameters}
                 })
         
         return scenarios
@@ -234,22 +478,22 @@ class TestGenerator:
         # Analyze function context for smarter input generation
         function_context = self._analyze_function_context(function)
         
-        for arg in function.args:
-            inputs[arg] = self._get_context_aware_value(arg, function_context)
+        for param in function.parameters:
+            inputs[param.name] = self._get_context_aware_value(param.name, function_context)
         return inputs
     
     def _generate_param_variations(self, function: FunctionInfo, param_index: int) -> Dict[str, Any]:
         """Generate parameter variations for testing."""
         inputs = self._generate_basic_inputs(function)
-        arg_name = function.args[param_index]
+        param_name = function.parameters[param_index].name
         
         # Generate different values based on parameter name
-        if 'num' in arg_name.lower() or 'count' in arg_name.lower():
-            inputs[arg_name] = [0, 1, -1, 100, -100]
-        elif 'str' in arg_name.lower() or 'text' in arg_name.lower():
-            inputs[arg_name] = ['', 'test', 'a' * 1000]
-        elif 'list' in arg_name.lower() or 'arr' in arg_name.lower():
-            inputs[arg_name] = [[], [1], [1, 2, 3]]
+        if 'num' in param_name.lower() or 'count' in param_name.lower():
+            inputs[param_name] = [0, 1, -1, 100, -100]
+        elif 'str' in param_name.lower() or 'text' in param_name.lower():
+            inputs[param_name] = ['', 'test', 'a' * 1000]
+        elif 'list' in param_name.lower() or 'arr' in param_name.lower():
+            inputs[param_name] = [[], [1], [1, 2, 3]]
         
         return inputs
     
@@ -388,17 +632,17 @@ class TestGenerator:
         """Generate inputs that might cause division by zero."""
         inputs = self._generate_basic_inputs(function)
         # Look for parameters that might be divisors
-        for arg in function.args:
-            if 'divisor' in arg.lower() or 'denom' in arg.lower():
-                inputs[arg] = 0
+        for param in function.parameters:
+            if 'divisor' in param.name.lower() or 'denom' in param.name.lower():
+                inputs[param.name] = 0
         return inputs
     
     def _generate_index_error_inputs(self, function: FunctionInfo) -> Dict[str, Any]:
         """Generate inputs that might cause index errors."""
         inputs = self._generate_basic_inputs(function)
-        for arg in function.args:
-            if 'index' in arg.lower() or 'idx' in arg.lower():
-                inputs[arg] = -1  # Negative index
+        for param in function.parameters:
+            if 'index' in param.name.lower() or 'idx' in param.name.lower():
+                inputs[param.name] = -1  # Negative index
         return inputs
     
     # Template functions for different languages
