@@ -6,6 +6,7 @@ from .class_analyzer import ClassAnalyzer
 from .edge_case_detector import EdgeCaseDetector
 from .dependency_analyzer import DependencyAnalyzer
 from .complexity_analyzer import ComplexityAnalyzer
+from .coverage_analyzer import CoverageAnalyzer
 from .analysis_orchestrator import AnalysisOrchestrator
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
 	"EdgeCaseDetector",
 	"DependencyAnalyzer",
 	"ComplexityAnalyzer",
+	"CoverageAnalyzer",
 	"AnalysisOrchestrator",
 ]
