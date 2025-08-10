@@ -1,7 +1,7 @@
 # API Reference (High-level)
 
 ## CLI (src/main.py)
-- Command: `python src/main.py --file <path> [--language <lang>] [--output <dir>] [--interactive]`
+- Command: `voylla --file <path> [--language <lang>] [--output <dir>] [--interactive]`
 - Prints analysis progress, generates tests, and shows estimated coverage.
 
 ## Key Classes

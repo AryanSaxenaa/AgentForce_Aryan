@@ -6,14 +6,16 @@ from src.interfaces.base_interfaces import IAIProvider, IAIProviderFactory, Test
 
 # Import AI libraries at module level for easier mocking in tests
 try:
-    import openai
+    # OpenAI Python SDK v1.x
+    from openai import OpenAI as _OpenAIClient
 except ImportError:
-    openai = None
+    _OpenAIClient = None
 
 try:
-    import anthropic
+    # Anthropic Python SDK
+    from anthropic import Anthropic as _AnthropicClient
 except ImportError:
-    anthropic = None
+    _AnthropicClient = None
 
 
 class OpenAIProvider(IAIProvider):
@@ -31,12 +33,13 @@ class OpenAIProvider(IAIProvider):
     
     def _initialize_client(self):
         """Initialize OpenAI client."""
-        if openai is None:
+        if _OpenAIClient is None:
             raise ImportError("openai package not installed. Run: pip install openai")
-        
-        self._client = openai.OpenAI(
+
+        # OpenAI SDK v1.x client
+        self._client = _OpenAIClient(
             api_key=self.api_key,
-            timeout=self.timeout
+            timeout=self.timeout,
         )
     
     def enhance_test_case(self, test, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -217,12 +220,12 @@ class AnthropicProvider(IAIProvider):
     
     def _initialize_client(self):
         """Initialize Anthropic client."""
-        if anthropic is None:
+        if _AnthropicClient is None:
             raise ImportError("anthropic package not installed. Run: pip install anthropic")
-        
-        self._client = anthropic.Anthropic(
+
+        self._client = _AnthropicClient(
             api_key=self.api_key,
-            timeout=self.timeout
+            timeout=self.timeout,
         )
     
     def enhance_test_case(self, test, context: Dict[str, Any]) -> Dict[str, Any]:

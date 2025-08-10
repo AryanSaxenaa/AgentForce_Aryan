@@ -10,11 +10,11 @@ Quick CLI runs:
 
 ```bash
 # Python
-python src/main.py -f examples/sample_code.py -l python
+voylla -f examples/sample_code.py -l python
 
 # JavaScript (auto-detect also works)
-python src/main.py -f examples/sample_code.js
+voylla -f examples/sample_code.js
 
 # Java (auto-detect also works)
-python src/main.py -f examples/Sample.java
+voylla -f examples/Sample.java
 ```

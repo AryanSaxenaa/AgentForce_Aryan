@@ -2,9 +2,9 @@
 
 An AI-powered agent that analyzes code and generates comprehensive test cases for Python, Java, and JavaScript.
 
-• User Guide: docs/USER_GUIDE.md
-• API Reference: docs/API_REFERENCE.md
-• Examples: examples/README.md
+• User Guide: https://github.com/AryanSaxenaa/Voylla/blob/main/docs/USER_GUIDE.md
+• API Reference: https://github.com/AryanSaxenaa/Voylla/blob/main/docs/API_REFERENCE.md
+• Examples: https://github.com/AryanSaxenaa/Voylla/blob/main/examples/README.md
 
 ## Features
 
@@ -31,7 +31,11 @@ test-generator-bot/
 
 ## Quick Start
 
-1. Install dependencies: `pip install -r requirements.txt`
+1. Install from PyPI (recommended):
+   ```bash
+   pip install voylla
+   ```
+   Or for local dev: `pip install -r requirements.txt`
 2. Set up AI API key (optional but recommended):
    ```bash
    python setup_ai.py
@@ -42,12 +46,15 @@ test-generator-bot/
    # OR
    export ANTHROPIC_API_KEY="your-api-key-here"
    ```
-3. Run: `python src/main.py --file your_code.py`
+3. Run:
+   ```bash
+   voylla --file your_code.py
+   ```
 
 Examples:
-- Python: `python src/main.py -f examples/sample_code.py -l python`
-- JavaScript (auto): `python src/main.py -f examples/sample_code.js`
-- Java (auto): `python src/main.py -f examples/Sample.java`
+- Python: `voylla -f examples/sample_code.py -l python -o test_output`
+- JavaScript (auto): `voylla -f examples/sample_code.js -o test_output`
+- Java (auto): `voylla -f examples/Sample.java -o test_output`
 
 ## AI Enhancement
 

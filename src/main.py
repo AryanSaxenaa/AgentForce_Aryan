@@ -48,7 +48,7 @@ def main(file, language, output, interactive, coverage):
     if preferred_provider != 'mock':
         console.print(f"[green]🤖 AI Enhancement: {preferred_provider.title()}[/green]")
     else:
-        console.print("[yellow]🤖 AI Enhancement: Disabled (run python setup_ai.py to configure)[/yellow]")
+        console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY or ANTHROPIC_API_KEY, or create a .env)[/yellow]")
     
     # Validate input file
     code_file = Path(file)

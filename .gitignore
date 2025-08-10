@@ -136,3 +136,6 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Project outputs
+test_output/
+test_output~/

@@ -20,7 +20,7 @@ AI_TIMEOUT=30
 ## Run CLI
 
 ```bash
-python src/main.py --file examples/sample_code.py --language python --output test_output
+voylla --file examples/sample_code.py --language python --output test_output
 ```
 
 - Omit `--language` to auto-detect JS/Java/Python.
@@ -29,7 +29,7 @@ python src/main.py --file examples/sample_code.py --language python --output tes
 ## Demo
 
 ```bash
-python demo.py -f examples/sample_code.py -l python -o test_output
+voylla -f examples/sample_code.py -l python -o test_output
 ```
 
 ## Tips
