@@ -1,7 +1,6 @@
 """
 AI Provider Manager - Manages AI provider selection and fallback logic
 """
-import os
 from typing import Dict, Any, Optional, List
 from src.interfaces.base_interfaces import IAIProvider
 from src.factories.ai_provider_factory import AIProviderFactory

@@ -1,8 +1,6 @@
 """
 Test Generator Agent - AI-powered test case generation and refinement
 """
-import os
-import json
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from rich.console import Console
@@ -10,8 +8,8 @@ from rich.prompt import Prompt, Confirm
 from rich.table import Table
 from rich.panel import Panel
 
-from src.analyzers.code_analyzer import CodeAnalyzer, AnalysisResult
-from src.generators.test_generator import TestGenerator, TestCase
+from src.analyzers.code_analyzer import AnalysisResult
+from src.generators.test_generator import TestCase
 from src.config.configuration_manager import ConfigurationManager
 from src.interfaces.base_interfaces import ITestGeneratorAgent, ICodeAnalyzer, ITestGenerator, IAIProvider
 

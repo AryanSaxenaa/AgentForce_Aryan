@@ -13,8 +13,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.agents.test_agent import TestGeneratorAgent
-from src.analyzers.code_analyzer import CodeAnalyzer
-from src.generators.test_generator import TestGenerator
 from src.config.configuration_manager import ConfigurationManager
 from src.factories.analyzer_factory import AnalyzerFactory
 from src.factories.generator_factory import GeneratorFactory
@@ -48,7 +46,7 @@ def main(file, language, output, interactive, coverage):
     if preferred_provider != 'mock':
         console.print(f"[green]🤖 AI Enhancement: {preferred_provider.title()}[/green]")
     else:
-        console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY or ANTHROPIC_API_KEY, or create a .env)[/yellow]")
+        console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY, or create a .env)[/yellow]")
     
     # Validate input file
     code_file = Path(file)

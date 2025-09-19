@@ -2,9 +2,8 @@
 Test Generator - Generates unit, integration, and edge test cases with AI integration
 """
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 from src.analyzers.code_analyzer import AnalysisResult, FunctionInfo
-from src.interfaces.base_interfaces import TestType, TestCase, TestSuite, Language, IAIProvider, ITestGenerator
+from src.interfaces.base_interfaces import TestType, TestCase, TestSuite, Language, ITestGenerator
 from src.config.ai_provider_manager import AIProviderManager
 from .integration_test_generator import IntegrationTestGenerator
 

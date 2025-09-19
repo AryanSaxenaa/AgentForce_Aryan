@@ -36,7 +36,7 @@ class TestAIProviderFactory:
         assert provider.config == config
     
     @patch.dict(os.environ, {'OPENAI_API_KEY': 'test_key'})
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_create_openai_provider_with_key(self, mock_openai):
         """Test creating OpenAI provider when API key is available."""
         factory = AIProviderFactory()
@@ -60,7 +60,7 @@ class TestAIProviderFactory:
         assert isinstance(provider, MockAIProvider)
     
     @patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'test_key'})
-    @patch('src.factories.ai_provider_factory.anthropic')
+    @patch('src.factories.ai_provider_factory._AnthropicClient')
     def test_create_anthropic_provider_with_key(self, mock_anthropic):
         """Test creating Anthropic provider when API key is available."""
         factory = AIProviderFactory()
@@ -196,7 +196,7 @@ class TestMockAIProvider:
 class TestOpenAIProvider:
     """Test cases for OpenAIProvider."""
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_openai_provider_initialization(self, mock_openai):
         """Test OpenAI provider initializes correctly."""
         api_key = 'test_key'
@@ -216,7 +216,7 @@ class TestOpenAIProvider:
         assert provider.timeout == 30
         mock_openai.OpenAI.assert_called_once_with(api_key=api_key, timeout=30)
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_openai_provider_initialization_defaults(self, mock_openai):
         """Test OpenAI provider uses defaults when config values missing."""
         api_key = 'test_key'
@@ -231,11 +231,11 @@ class TestOpenAIProvider:
     
     def test_openai_provider_missing_package(self):
         """Test OpenAI provider raises ImportError when package not installed."""
-        with patch('src.factories.ai_provider_factory.openai', None):
+        with patch('src.factories.ai_provider_factory._OpenAIClient', None):
             with pytest.raises(ImportError, match="openai package not installed"):
                 OpenAIProvider('test_key', {})
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_enhance_test_case_success(self, mock_openai):
         """Test OpenAI provider successfully enhances test case."""
         # Setup mock client
@@ -278,7 +278,7 @@ ASSERTIONS:
         assert 'Added specific assertion' in result['description']
         assert len(result['assertions']) == 2
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_enhance_test_case_api_error(self, mock_openai):
         """Test OpenAI provider handles API errors gracefully."""
         mock_client = Mock()
@@ -299,7 +299,7 @@ ASSERTIONS:
         
         assert result is None
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_suggest_test_improvements_success(self, mock_openai):
         """Test OpenAI provider successfully suggests improvements."""
         mock_client = Mock()
@@ -323,7 +323,7 @@ ASSERTIONS:
         
         assert suggestions == "1. Add more assertions\n2. Use realistic data"
     
-    @patch('src.factories.ai_provider_factory.openai')
+    @patch('src.factories.ai_provider_factory._OpenAIClient')
     def test_analyze_code_patterns_success(self, mock_openai):
         """Test OpenAI provider successfully analyzes code patterns."""
         mock_client = Mock()
@@ -347,7 +347,7 @@ ASSERTIONS:
 class TestAnthropicProvider:
     """Test cases for AnthropicProvider."""
     
-    @patch('src.factories.ai_provider_factory.anthropic')
+    @patch('src.factories.ai_provider_factory._AnthropicClient')
     def test_anthropic_provider_initialization(self, mock_anthropic):
         """Test Anthropic provider initializes correctly."""
         api_key = 'test_key'
@@ -369,11 +369,11 @@ class TestAnthropicProvider:
     
     def test_anthropic_provider_missing_package(self):
         """Test Anthropic provider raises ImportError when package not installed."""
-        with patch('src.factories.ai_provider_factory.anthropic', None):
+        with patch('src.factories.ai_provider_factory._AnthropicClient', None):
             with pytest.raises(ImportError, match="anthropic package not installed"):
                 AnthropicProvider('test_key', {})
     
-    @patch('src.factories.ai_provider_factory.anthropic')
+    @patch('src.factories.ai_provider_factory._AnthropicClient')
     def test_enhance_test_case_success(self, mock_anthropic):
         """Test Anthropic provider successfully enhances test case."""
         # Setup mock client
@@ -417,7 +417,7 @@ ASSERTIONS:
         assert 'Added specific assertion' in result['description']
         assert len(result['assertions']) == 2
     
-    @patch('src.factories.ai_provider_factory.anthropic')
+    @patch('src.factories.ai_provider_factory._AnthropicClient')
     def test_enhance_test_case_api_error(self, mock_anthropic):
         """Test Anthropic provider handles API errors gracefully."""
         mock_client = Mock()
