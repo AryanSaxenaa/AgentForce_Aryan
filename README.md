@@ -47,6 +47,8 @@ test-generator-bot/
    export OPENAI_API_KEY="your-api-key-here"
    # OR
    export ANTHROPIC_API_KEY="your-api-key-here"
+   # OR
+   export GEMINI_API_KEY="your-api-key-here"
    ```
 3. Run:
    ```bash
@@ -63,7 +65,8 @@ Examples:
 The bot supports multiple AI providers for enhanced test generation:
 
 - **OpenAI GPT-4**: Set `OPENAI_API_KEY` environment variable
-- **Anthropic Claude**: Set `ANTHROPIC_API_KEY` environment variable  
+- **Anthropic Claude**: Set `ANTHROPIC_API_KEY` environment variable
+- **Google Gemini**: Set `GEMINI_API_KEY` environment variable
 - **Auto-detection**: Will use available provider automatically
 - **Mock Mode**: Works without API keys (basic enhancement only)
 
@@ -72,8 +75,9 @@ The bot supports multiple AI providers for enhanced test generation:
 Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Choose provider: "openai", "anthropic", "auto", or "mock"
+# Choose provider: "openai", "anthropic", "gemini", "auto", or "mock"
 AI_PROVIDER=auto
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
