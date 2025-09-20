@@ -54,18 +54,17 @@ class ConfigurationManager(IConfigurationManager):
     """Centralized configuration management with environment variable support."""
 
     def __init__(self, config_path: Optional[str] = None):
+        # Load from .env file first to make environment variables available
+        try:
+            from dotenv import load_dotenv  # type: ignore
+            load_dotenv()
+        except Exception:
+            pass
+            
         self.config_path = config_path or "config/config.yaml"
         self.config = TestGeneratorConfig()
         self._config_data = self.load_config(self.config_path)
         self._apply_config()
-        # Load from .env if present to make API keys available
-        try:
-            from dotenv import load_dotenv  # type: ignore
-
-            load_dotenv()
-        except Exception:
-            pass
-
         self._load_from_env()
 
     def load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:

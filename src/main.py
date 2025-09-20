@@ -12,6 +12,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load environment variables early
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from src.agents.test_agent import TestGeneratorAgent
 from src.config.configuration_manager import ConfigurationManager
 from src.factories.analyzer_factory import AnalyzerFactory
@@ -27,6 +34,7 @@ console = Console()
 @click.option('--output', '-o', help='Output directory for generated tests')
 @click.option('--interactive', '-i', is_flag=True, help='Enable interactive mode for test refinement')
 @click.option('--coverage', '-c', is_flag=True, help='Generate coverage report')
+@click.version_option(version='0.2.1', prog_name='voylla')
 def main(file, language, output, interactive, coverage):
     """Test Case Generator Bot - Analyze code and generate comprehensive test cases."""
     
@@ -43,10 +51,15 @@ def main(file, language, output, interactive, coverage):
     available_providers = config_manager.get_available_ai_providers()
     preferred_provider = config_manager.get_preferred_ai_provider()
     
-    if preferred_provider != 'mock':
+    # Check if any AI provider is available
+    has_ai = any(available_providers.values())
+    
+    if has_ai and preferred_provider != 'mock':
         console.print(f"[green]🤖 AI Enhancement: {preferred_provider.title()}[/green]")
     else:
-        console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY, or create a .env)[/yellow]")
+        console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY in environment or .env file)[/yellow]")
+        if not has_ai:
+            console.print("[dim]Available providers: OpenAI, Anthropic, Google Gemini[/dim]")
     
     # Validate input file
     code_file = Path(file)
