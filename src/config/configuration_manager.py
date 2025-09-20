@@ -217,10 +217,15 @@ class ConfigurationManager(IConfigurationManager):
 
     def get_available_ai_providers(self) -> Dict[str, bool]:
         """Check which AI providers are available based on API keys."""
+        def get_clean(key):
+            """Get environment variable and strip any whitespace/newlines."""
+            val = os.getenv(key)
+            return val.strip() if val else None
+            
         return {
-            "openai": bool(os.getenv("OPENAI_API_KEY")),
-            "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
-            "gemini": bool(os.getenv("GEMINI_API_KEY")),
+            "openai": bool(get_clean("OPENAI_API_KEY")),
+            "anthropic": bool(get_clean("ANTHROPIC_API_KEY")),
+            "gemini": bool(get_clean("GEMINI_API_KEY")),
         }
 
     def get_preferred_ai_provider(self) -> str:
@@ -245,12 +250,17 @@ class ConfigurationManager(IConfigurationManager):
 
     def get_api_key(self, provider: str) -> Optional[str]:
         """Get API key for the specified provider."""
+        def get_clean(key):
+            """Get environment variable and strip any whitespace/newlines."""
+            val = os.getenv(key)
+            return val.strip() if val else None
+            
         if provider == "openai":
-            return os.getenv("OPENAI_API_KEY")
+            return get_clean("OPENAI_API_KEY")
         elif provider == "anthropic":
-            return os.getenv("ANTHROPIC_API_KEY")
+            return get_clean("ANTHROPIC_API_KEY")
         elif provider == "gemini":
-            return os.getenv("GEMINI_API_KEY")
+            return get_clean("GEMINI_API_KEY")
         return None
 
     def save_config(self, config_path: Optional[str] = None) -> None:

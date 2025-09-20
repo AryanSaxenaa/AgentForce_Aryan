@@ -645,13 +645,18 @@ class AIProviderFactory(IAIProviderFactory):
             # Get API key from environment
             import os
 
+            def get_clean(key):
+                """Get environment variable and strip any whitespace/newlines."""
+                val = os.getenv(key)
+                return val.strip() if val else None
+
             api_key = None
             if provider_type == "openai":
-                api_key = os.getenv("OPENAI_API_KEY")
+                api_key = get_clean("OPENAI_API_KEY")
             elif provider_type == "anthropic":
-                api_key = os.getenv("ANTHROPIC_API_KEY")
+                api_key = get_clean("ANTHROPIC_API_KEY")
             elif provider_type == "gemini":
-                api_key = os.getenv("GEMINI_API_KEY")
+                api_key = get_clean("GEMINI_API_KEY")
 
             if not api_key:
                 print(f"Warning: No API key found for {provider_type}, falling back to mock provider")

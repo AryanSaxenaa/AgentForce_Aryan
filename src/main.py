@@ -33,13 +33,18 @@ def check_ai_providers():
     # Ensure .env file is loaded before checking environment variables
     try:
         from dotenv import load_dotenv
-        load_dotenv()
+        load_dotenv(override=True)
     except ImportError:
         pass
+
+    def get_clean(key):
+        """Get environment variable and strip any whitespace/newlines."""
+        val = os.getenv(key)
+        return val.strip() if val else None
     
-    gemini_key = os.getenv('GEMINI_API_KEY')
-    openai_key = os.getenv('OPENAI_API_KEY')
-    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+    gemini_key = get_clean('GEMINI_API_KEY')
+    openai_key = get_clean('OPENAI_API_KEY')
+    anthropic_key = get_clean('ANTHROPIC_API_KEY')
     
     if gemini_key:
         return True, "gemini"
