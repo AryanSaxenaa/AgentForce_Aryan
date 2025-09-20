@@ -28,6 +28,21 @@ from src.interfaces.base_interfaces import Language
 
 console = Console()
 
+def check_ai_providers():
+    """Check which AI providers are available and return the best one."""
+    gemini_key = os.getenv('GEMINI_API_KEY')
+    openai_key = os.getenv('OPENAI_API_KEY')
+    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+    
+    if gemini_key:
+        return True, "gemini"
+    elif openai_key:
+        return True, "openai"
+    elif anthropic_key:
+        return True, "anthropic"
+    else:
+        return False, "mock"
+
 @click.command()
 @click.option('--file', '-f', required=True, help='Path to the code file to analyze')
 @click.option('--language', '-l', help='Programming language (auto-detected if not specified)')
@@ -47,19 +62,14 @@ def main(file, language, output, interactive, coverage):
     # Initialize configuration manager
     config_manager = ConfigurationManager()
     
-    # Show AI configuration status
-    available_providers = config_manager.get_available_ai_providers()
-    preferred_provider = config_manager.get_preferred_ai_provider()
-    
-    # Check if any AI provider is available
-    has_ai = any(available_providers.values())
+    # Use improved AI provider detection
+    has_ai, preferred_provider = check_ai_providers()
     
     if has_ai and preferred_provider != 'mock':
         console.print(f"[green]🤖 AI Enhancement: {preferred_provider.title()}[/green]")
     else:
         console.print("[yellow]🤖 AI Enhancement: Disabled (set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY in environment or .env file)[/yellow]")
-        if not has_ai:
-            console.print("[dim]Available providers: OpenAI, Anthropic, Google Gemini[/dim]")
+        console.print("[dim]Available providers: OpenAI, Anthropic, Google Gemini[/dim]")
     
     # Validate input file
     code_file = Path(file)
