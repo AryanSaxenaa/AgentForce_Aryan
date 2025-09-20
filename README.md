@@ -6,7 +6,7 @@ An AI-powered agent that analyzes code and generates comprehensive test cases fo
 • API Reference: https://github.com/AryanSaxenaa/Voylla/blob/main/docs/API_REFERENCE.md
 • Examples: https://github.com/AryanSaxenaa/Voylla/blob/main/examples/README.md
 
-## Voylla is a Published Package https://pypi.org/project/voylla/0.1.0/
+## Voylla is a Published Package https://pypi.org/project/voylla/
 
 ## Features
 
