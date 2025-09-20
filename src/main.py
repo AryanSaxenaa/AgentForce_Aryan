@@ -30,6 +30,13 @@ console = Console()
 
 def check_ai_providers():
     """Check which AI providers are available and return the best one."""
+    # Ensure .env file is loaded before checking environment variables
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+    
     gemini_key = os.getenv('GEMINI_API_KEY')
     openai_key = os.getenv('OPENAI_API_KEY')
     anthropic_key = os.getenv('ANTHROPIC_API_KEY')
